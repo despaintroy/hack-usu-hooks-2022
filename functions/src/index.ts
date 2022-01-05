@@ -5,6 +5,7 @@ import { Request, Response } from 'express'
 import * as functions from 'firebase-functions'
 
 const app = express()
+app.use(cors({ origin: true }))
 
 interface RequestPayload {
 	api_url: string
@@ -24,21 +25,20 @@ function getUserId(url: string): string {
 	return url.split('/').pop() ?? ''
 }
 
-app.use(cors({ origin: true }))
-
 app.post('/api/eventbrite', (req: Request, res: Response) => {
 	const payload: RequestPayload = req.body
 
 	if (payload.config.action === 'barcode.checked_in') {
+		functions.logger.log('EVENTBRITE CHECKIN', payload)
+
 		const hook = new Webhook(functions.config().discord.webhook_checkin)
-		functions.logger.log('EVENTBRITE INVOKED', payload)
 		const userID = getUserId(payload.api_url)
 
 		hook.setUsername('New VIP Check-in')
 		hook
 			.success(
-				`**${userID} (Sponsor)**`,
-				'From: Utah State University',
+				`**${userID} (Guest Type)**`,
+				'From: Organization Name',
 				'Host: <@761334958752006145>'
 			)
 			.catch(err => functions.logger.log(err))
@@ -46,6 +46,7 @@ app.post('/api/eventbrite', (req: Request, res: Response) => {
 
 	if (payload.config.action === 'test') {
 		const hook = new Webhook(functions.config().discord.webhook_checkin)
+		functions.logger.log('EVENTBRITE TEST', payload)
 		hook.setUsername('Test Notification Webhook')
 		hook.send('Test notification.').catch(err => functions.logger.log(err))
 	}
